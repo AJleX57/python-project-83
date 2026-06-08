@@ -27,18 +27,15 @@ def index():
 def urls_post():
     url = request.form.get('url', '').strip()
 
-    # Валидация
     if not url or len(url) > 255 or not validators.url(url):
         flash('Некорректный URL', 'danger')
         return render_template('index.html', url=url), 422
 
-    # Нормализация: оставляем только scheme + netloc
     parsed = urlparse(url)
     normalized = f"{parsed.scheme}://{parsed.netloc}"
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Проверяем, существует ли уже такой URL
             cur.execute('SELECT id FROM urls WHERE name = %s', (normalized,))
             existing = cur.fetchone()
 
@@ -46,7 +43,6 @@ def urls_post():
                 flash('Страница уже существует', 'info')
                 return redirect(url_for('url_get', id=existing[0]))
 
-            # Добавляем новый URL
             cur.execute(
                 'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id',
                 (normalized, date.today())
@@ -61,9 +57,17 @@ def urls_post():
 def urls_get():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                'SELECT id, name, created_at FROM urls ORDER BY id DESC'
-            )
+            cur.execute('''
+                SELECT
+                    urls.id,
+                    urls.name,
+                    MAX(url_checks.created_at) AS last_check,
+                    url_checks.status_code
+                FROM urls
+                LEFT JOIN url_checks ON urls.id = url_checks.url_id
+                GROUP BY urls.id, urls.name, url_checks.status_code
+                ORDER BY urls.id DESC
+            ''')
             urls = cur.fetchall()
     return render_template('urls.html', urls=urls)
 
@@ -77,13 +81,32 @@ def url_get(id):
             )
             url = cur.fetchone()
 
+            cur.execute('''
+                SELECT id, status_code, h1, title, description, created_at
+                FROM url_checks
+                WHERE url_id = %s
+                ORDER BY id DESC
+            ''', (id,))
+            checks = cur.fetchall()
+
     if not url:
         return 'Not Found', 404
 
-    return render_template('url.html', url=url)
+    return render_template('url.html', url=url, checks=checks)
 
 
 @app.post('/urls/<int:id>/checks')
 def url_check(id):
-    # Будет реализовано на следующем шаге
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    '''INSERT INTO url_checks (url_id, created_at)
+                    VALUES (%s, %s)''',
+                    (id, date.today())
+                )
+        flash('Страница успешно проверена', 'success')
+    except Exception:
+        flash('Произошла ошибка при проверке', 'danger')
+
     return redirect(url_for('url_get', id=id))

@@ -20,7 +20,7 @@
                 <a href="{{ url_for('url_get', id=url[0]) }}">{{ url[1] }}</a>
             </td>
             <td>{{ url[2] or '' }}</td>
-            <td></td>
+            <td>{{ url[3] or '' }}</td>
         </tr>
         {% endfor %}
     </tbody>
