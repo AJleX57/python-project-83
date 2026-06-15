@@ -26,7 +26,7 @@ def truncate(text, length=200):
     return text
 
 
-@app.route('/')
+@app.get('/')
 def index():
     return render_template('index.html')
 
