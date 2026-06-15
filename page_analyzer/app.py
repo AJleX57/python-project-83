@@ -52,7 +52,8 @@ def urls_post():
                 return redirect(url_for('url_get', id=existing[0]))
 
             cur.execute(
-                'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id',
+                'INSERT INTO urls (name, created_at)'
+                'VALUES (%s, %s) RETURNING id',
                 (normalized, date.today())
             )
             url_id = cur.fetchone()[0]
