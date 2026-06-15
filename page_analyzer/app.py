@@ -1,5 +1,6 @@
 import os
 import requests
+from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, redirect, url_for, flash
 from dotenv import load_dotenv
 import psycopg
@@ -17,6 +18,12 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 
 def get_conn():
     return psycopg.connect(DATABASE_URL)
+
+
+def truncate(text, length=200):
+    if text and len(text) > length:
+        return text[:length] + '...'
+    return text
 
 
 @app.route('/')
@@ -114,12 +121,27 @@ def url_check(id):
         response = requests.get(url[0], timeout=10)
         response.raise_for_status()
 
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        h1 = soup.find('h1')
+        h1_text = truncate(h1.get_text(strip=True)) if h1 else ''
+
+        title = soup.find('title')
+        title_text = truncate(title.get_text(strip=True)) if title else ''
+
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        desc_text = truncate(
+            meta_desc.get('content', '') if meta_desc else ''
+        )
+
         with get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    '''INSERT INTO url_checks (url_id, status_code, created_at)
-                    VALUES (%s, %s, %s)''',
-                    (id, response.status_code, date.today())
+                    '''INSERT INTO url_checks
+                    (url_id, status_code, h1, title, description, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)''',
+                    (id, response.status_code, h1_text,
+                     title_text, desc_text, date.today())
                 )
 
         flash('Страница успешно проверена', 'success')
