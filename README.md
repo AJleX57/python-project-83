@@ -6,3 +6,4 @@
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=AJleX57_python-project-83&metric=bugs)](https://sonarcloud.io/summary/new_code?id=AJleX57_python-project-83)
 
 ### Ссылка на приложение:
+https://python-project-83-kbhe.onrender.com
