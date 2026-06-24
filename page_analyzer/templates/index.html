@@ -7,9 +7,11 @@
         <p class="text-center text-muted mb-4">Бесплатно проверяйте сайты на SEO-пригодность</p>
         <form action="{{ url_for('urls_post') }}" method="post">
             <div class="input-group">
+                <label for="url-input" class="visually-hidden">URL сайта</label>
                 <input
                     type="text"
                     name="url"
+                    id="url-input"
                     class="form-control"
                     placeholder="https://www.example.com"
                     value="{{ url or '' }}"
